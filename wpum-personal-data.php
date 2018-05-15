@@ -5,6 +5,7 @@ Plugin URI:  https://wpusermanager.com
 Description: Addon for WP User Manager, allow the user to request his personal data and request erasure of personal data from the account page.
 Version:     1.0.0
 Author:      Alessandro Tesoro
+Author URI:  https://wpusermanager.com/
 License:     GPLv3+
 Text Domain: wpum-personal-data
 Domain Path: /languages
