@@ -1,0 +1,6 @@
+{
+    "require": {
+        "wp-user-manager/wpum-extension-activation": "dev-master",
+        "wearerequired/wp-requirements-check": "^1.0"
+    }
+}
