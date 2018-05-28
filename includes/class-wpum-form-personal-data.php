@@ -2,7 +2,7 @@
 /**
  * Handles the form where users can request their personal data.
  *
- * @package     wpum-delete-account
+ * @package     wpum-personal-data
  * @copyright   Copyright (c) 2018, Alessandro Tesoro
  * @license     https://opensource.org/licenses/gpl-license GNU Public License
  * @since       1.0.0
