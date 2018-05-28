@@ -50,6 +50,75 @@ function wpumpd_export_custom_fields_user_data( $email_address, $page = 1 ) {
 		$group_label = esc_html__( 'Additional account details' );
 		$data        = array();
 
+		if ( carbon_get_user_meta( $user->ID, 'current_user_avatar' ) ) {
+			$data[] = array(
+				'name'  => esc_html__( 'User avatar' ),
+				'value' => carbon_get_user_meta( $user->ID, 'current_user_avatar' ),
+			);
+		}
+
+		if ( carbon_get_user_meta( $user->ID, 'user_cover' ) ) {
+			$data[] = array(
+				'name'  => esc_html__( 'User profile cover' ),
+				'value' => carbon_get_user_meta( $user->ID, 'user_cover' ),
+			);
+		}
+
+		$fields = WPUM()->fields->get_fields(
+			[
+				'orderby' => 'field_order',
+				'order'   => 'ASC',
+			]
+		);
+
+		if ( is_array( $fields ) && ! empty( $fields ) ) {
+			foreach ( $fields as $field ) {
+				if ( $field->is_primary() ) {
+					continue;
+				}
+				if ( ! empty( carbon_get_user_meta( $user->ID, $field->get_meta( 'user_meta_key' ) ) ) ) {
+
+					$value = carbon_get_user_meta( $user->ID, $field->get_meta( 'user_meta_key' ) );
+
+					if ( $field->get_type() == 'checkbox' ) {
+						$value = esc_html__( 'Yes' );
+					} elseif ( $field->get_type() == 'dropdown' || $field->get_type() == 'radio' ) {
+						$options = $field->get_meta( 'dropdown_options' );
+						if ( is_array( $options ) ) {
+							foreach ( $options as $key => $option ) {
+								if ( $option['value'] == $value ) {
+									$value = $option['label'];
+								}
+							}
+						}
+					} elseif ( $field->get_type() == 'multiselect' || $field->get_type() == 'multicheckbox' ) {
+
+						$stored_field_options = $field->get_meta( 'dropdown_options' );
+						$stored_options       = [];
+						$found_options_labels = [];
+
+						foreach ( $stored_field_options as $key => $stored_option ) {
+							$stored_options[ $stored_option['value'] ] = $stored_option['label'];
+						}
+
+						$values = [];
+
+						foreach ( $value as $user_stored_value ) {
+							$values[] = $stored_options[ $user_stored_value ];
+						}
+
+						$value = implode( ', ', $values );
+
+					}
+
+					$data[] = array(
+						'name'  => $field->get_name(),
+						'value' => $value,
+					);
+				}
+			}
+		}
+
 		$export_items[] = array(
 			'group_id'    => $group_id,
 			'group_label' => $group_label,

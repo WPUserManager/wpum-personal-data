@@ -101,10 +101,9 @@ if ( ! class_exists( 'WPUM_Personal_Data' ) ) :
 		 * @return void
 		 */
 		public function includes() {
-
 			require_once WPUMPD_PLUGIN_DIR . 'includes/actions.php';
 			require_once WPUMPD_PLUGIN_DIR . 'includes/custom-exporter.php';
-
+			require_once WPUMPD_PLUGIN_DIR . 'includes/custom-eraser.php';
 		}
 
 		/**
