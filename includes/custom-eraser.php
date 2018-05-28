@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 function wpumpd_plugin_register_erasers( $erasers = array() ) {
 
 	$erasers[] = array(
-		'eraser_friendly_name' => esc_html__( 'Additional account details' ),
+		'eraser_friendly_name' => esc_html__( 'Additional account details', 'wpum-personal-data' ),
 		'callback'             => 'wpumpd_plugin_user_data_eraser',
 	);
 
@@ -73,7 +73,7 @@ function wpumpd_plugin_user_data_eraser( $email_address, $page = 1 ) {
 					if ( $field_to_remove ) {
 						$items_removed = true;
 					} else {
-						$messages[] = sprintf( esc_html__( 'Your "%s" was unable to be removed at this time.' ), $field->get_name() );
+						$messages[] = sprintf( esc_html__( 'Your "%s" was unable to be removed at this time.', 'wpum-personal-data' ), $field->get_name() );
 						$items_retained = true;
 					}
 				}

@@ -2,10 +2,10 @@
 # This file is distributed under the GPLv3+.
 msgid ""
 msgstr ""
-"Project-Id-Version: WPUM Personal Data 1.0.0\n"
+"Project-Id-Version: WPUM Personal Data 1.1.0\n"
 "Report-Msgid-Bugs-To: "
 "https://wordpress.org/support/plugin/wpum-personal-data\n"
-"POT-Creation-Date: 2018-05-14 15:37:46+00:00\n"
+"POT-Creation-Date: 2018-05-28 14:31:48+00:00\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -39,12 +39,12 @@ msgstr ""
 msgid "Request personal data erasure"
 msgstr ""
 
-#: includes/class-wpum-form-data-erasure.php:160
-#: includes/class-wpum-form-personal-data.php:161
+#: includes/class-wpum-form-data-erasure.php:164
+#: includes/class-wpum-form-personal-data.php:166
 msgid "The password you entered is incorrect."
 msgstr ""
 
-#: includes/class-wpum-form-data-erasure.php:178
+#: includes/class-wpum-form-data-erasure.php:182
 msgid ""
 "A confirmation email has been sent to %s. Click the link within the email "
 "to confirm your erasure request."
@@ -66,10 +66,31 @@ msgstr ""
 msgid "Request personal data export"
 msgstr ""
 
-#: includes/class-wpum-form-personal-data.php:179
+#: includes/class-wpum-form-personal-data.php:184
 msgid ""
 "A confirmation email has been sent to %s. Click the link within the email "
 "to confirm your export request."
+msgstr ""
+
+#: includes/custom-eraser.php:24 includes/custom-exporter.php:24
+#: includes/custom-exporter.php:50
+msgid "Additional account details"
+msgstr ""
+
+#: includes/custom-eraser.php:76
+msgid "Your \"%s\" was unable to be removed at this time."
+msgstr ""
+
+#: includes/custom-exporter.php:55
+msgid "User avatar"
+msgstr ""
+
+#: includes/custom-exporter.php:62
+msgid "User profile cover"
+msgstr ""
+
+#: includes/custom-exporter.php:84
+msgid "Yes"
 msgstr ""
 
 #. Plugin Name of the plugin/theme
@@ -88,4 +109,8 @@ msgstr ""
 
 #. Author of the plugin/theme
 msgid "Alessandro Tesoro"
+msgstr ""
+
+#. Author URI of the plugin/theme
+msgid "https://wpusermanager.com/"
 msgstr ""

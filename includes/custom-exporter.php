@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 function wpumpd_plugin_register_exporters( $exporters ) {
 
 	$exporters[] = array(
-		'exporter_friendly_name' => esc_html__( 'Additional account details' ),
+		'exporter_friendly_name' => esc_html__( 'Additional account details', 'wpum-personal-data' ),
 		'callback'               => 'wpumpd_export_custom_fields_user_data',
 	);
 
@@ -47,19 +47,19 @@ function wpumpd_export_custom_fields_user_data( $email_address, $page = 1 ) {
 
 		$item_id     = "additional-user-data-{$user->ID}";
 		$group_id    = 'user';
-		$group_label = esc_html__( 'Additional account details' );
+		$group_label = esc_html__( 'Additional account details', 'wpum-personal-data' );
 		$data        = array();
 
 		if ( carbon_get_user_meta( $user->ID, 'current_user_avatar' ) ) {
 			$data[] = array(
-				'name'  => esc_html__( 'User avatar' ),
+				'name'  => esc_html__( 'User avatar', 'wpum-personal-data' ),
 				'value' => carbon_get_user_meta( $user->ID, 'current_user_avatar' ),
 			);
 		}
 
 		if ( carbon_get_user_meta( $user->ID, 'user_cover' ) ) {
 			$data[] = array(
-				'name'  => esc_html__( 'User profile cover' ),
+				'name'  => esc_html__( 'User profile cover', 'wpum-personal-data' ),
 				'value' => carbon_get_user_meta( $user->ID, 'user_cover' ),
 			);
 		}
@@ -81,7 +81,7 @@ function wpumpd_export_custom_fields_user_data( $email_address, $page = 1 ) {
 					$value = carbon_get_user_meta( $user->ID, $field->get_meta( 'user_meta_key' ) );
 
 					if ( $field->get_type() == 'checkbox' ) {
-						$value = esc_html__( 'Yes' );
+						$value = esc_html__( 'Yes', 'wpum-personal-data' );
 					} elseif ( $field->get_type() == 'dropdown' || $field->get_type() == 'radio' ) {
 						$options = $field->get_meta( 'dropdown_options' );
 						if ( is_array( $options ) ) {
