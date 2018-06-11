@@ -1,5 +1,5 @@
-=== WPUM Personal Data ===
-Contributors: alessandro.tesoro
+=== WP User Manager Personal Data ===
+Contributors: alessandro.tesoro, wpusermanager
 Tags: community, member, gdpr, data export, data erasure
 Requires at least: 4.9.6
 Tested up to: 4.9
