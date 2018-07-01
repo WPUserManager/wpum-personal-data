@@ -4,7 +4,7 @@ Tags: community, member, gdpr, data export, data erasure
 Requires at least: 4.9.6
 Tested up to: 4.9
 Requires PHP: 5.5
-Stable tag: 1.1.1
+Stable tag: 1.1.2
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -37,3 +37,8 @@ Please refer to the [documentation here](https://docs.wpusermanager.com/category
 
 == Screenshots ==
 1. New tab within the account page from where users can process their own data.
+
+== Changelog ==
+
+= Version 1.1.2 =
+- Fix: compatibility with older version of php
