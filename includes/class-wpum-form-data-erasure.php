@@ -57,7 +57,7 @@ class WPUM_Form_Data_Erasure extends WPUM_Form {
 					'name'     => __( 'Personal data erasure request confirmation', 'wpum-personal-data' ),
 					'view'     => array( $this, 'confirmation' ),
 					'handler'  => false,
-					'priority' => 10,
+					'priority' => 11,
 				),
 			)
 		);

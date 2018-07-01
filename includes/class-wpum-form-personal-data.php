@@ -57,7 +57,7 @@ class WPUM_Form_Personal_Data extends WPUM_Form {
 					'name'     => __( 'Data export request confirmation', 'wpum-personal-data' ),
 					'view'     => array( $this, 'confirmation' ),
 					'handler'  => false,
-					'priority' => 10,
+					'priority' => 11,
 				),
 			)
 		);

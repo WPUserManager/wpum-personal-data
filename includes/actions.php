@@ -22,7 +22,7 @@ function wpumpd_register_new_account_tabs( $tabs ) {
 
 	$tabs['personal-data'] = [
 		'name'     => esc_html__( 'Personal data', 'wpum-personal-data' ),
-		'priority' => 0,
+		'priority' => 3,
 	];
 
 	return $tabs;
