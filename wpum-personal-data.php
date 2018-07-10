@@ -3,7 +3,7 @@
 Plugin Name: WPUM Personal Data
 Plugin URI:  https://wpusermanager.com
 Description: Addon for WP User Manager, allow the user to request his personal data and request erasure of personal data from the account page.
-Version:     1.1.2
+Version:     1.1.3
 Author:      Alessandro Tesoro
 Author URI:  https://wpusermanager.com/
 License:     GPLv3+
@@ -117,7 +117,7 @@ if ( ! class_exists( 'WPUM_Personal_Data' ) ) :
 
 			// Plugin version.
 			if ( ! defined( 'WPUMPD_VERSION' ) ) {
-				define( 'WPUMPD_VERSION', '1.1.2' );
+				define( 'WPUMPD_VERSION', '1.1.3' );
 			}
 
 			// Plugin Folder Path.
@@ -167,6 +167,8 @@ if ( ! class_exists( 'WPUM_Personal_Data' ) ) :
 		 */
 		public function plugin_can_run() {
 
+			$this->autoload();
+
 			$requirements_check = new WP_Requirements_Check( array(
 				'title' => 'WPUM Personal Data',
 				'php'   => '5.5',
@@ -184,6 +186,8 @@ if ( ! class_exists( 'WPUM_Personal_Data' ) ) :
 		 * @return boolean
 		 */
 		private function addon_can_run() {
+
+			$this->autoload();
 
 			$requirements_check = new WPUM_Extension_Activation(
 				array(
