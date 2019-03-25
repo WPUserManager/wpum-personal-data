@@ -37,6 +37,16 @@ add_filter( 'wpum_get_account_page_tabs', 'wpumpd_register_new_account_tabs' );
  */
 function wpumpd_register_account_tab_content() {
 
+	if ( isset( $_GET['user_action'] ) && $_GET['user_action'] === 'confirmed' ) {
+		WPUM()->templates
+			->set_template_data(
+				[
+					'message' => esc_html__( 'Your request has been successfully confirmed.' ),
+				]
+			)
+			->get_template_part( 'messages/general', 'success' );
+	}
+
 	echo WPUM()->forms->get_form( 'personal-data', [] );
 
 	echo '<br/>';
@@ -74,3 +84,32 @@ function wpumpd_set_template_loader_path( $file_paths ) {
 	return $file_paths;
 }
 add_filter( 'wpum_template_paths', 'wpumpd_set_template_loader_path' );
+
+/**
+ * Detect if wp-login is locked and add workaround for manual requests activation.
+ *
+ * @return void
+ */
+function wpum_validate_user_requests_on_frontend() {
+
+	if ( wpum_get_option( 'lock_wplogin' ) && isset( $_GET['action'] ) && $_GET['action'] === 'confirmaction' && isset( $_GET['request_id'] ) && isset( $_GET['confirm_key'] ) ) {
+
+		$request_id = sanitize_text_field( $_GET['request_id'] );
+		$key        = sanitize_text_field( $_GET['confirm_key'] );
+
+		$valid = wp_validate_user_request_key( $request_id, $key );
+
+		if ( ! is_wp_error( $valid ) ) {
+
+			_wp_privacy_account_request_confirmed( $request_id );
+
+			_wp_privacy_send_request_confirmation_notification( $request_id );
+
+			$url = add_query_arg( [ 'user_action' => 'confirmed' ], trailingslashit( get_permalink( wpum_get_core_page_id( 'account' ) ) ) . 'personal-data' );
+			wp_safe_redirect( $url );
+			exit;
+		}
+	}
+
+}
+add_action( 'init', 'wpum_validate_user_requests_on_frontend' );
