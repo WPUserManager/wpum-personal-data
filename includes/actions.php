@@ -41,7 +41,7 @@ function wpumpd_register_account_tab_content() {
 		WPUM()->templates
 			->set_template_data(
 				[
-					'message' => esc_html__( 'Your request has been successfully confirmed.' ),
+					'message' => esc_html__( 'Your request has been successfully confirmed.', 'wpum-personal-data' ),
 				]
 			)
 			->get_template_part( 'messages/general', 'success' );
