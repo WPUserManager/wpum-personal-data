@@ -48,7 +48,7 @@ if ( ! class_exists( 'WPUM_Personal_Data' ) ) :
 		/**
 		 * WPUMPD Instance.
 		 *
-		 * @var WPUMPD() the WPUM Instance
+		 * @var WPUM_Personal_Data the WPUM Instance
 		 */
 		protected static $_instance;
 
@@ -58,20 +58,28 @@ if ( ! class_exists( 'WPUM_Personal_Data' ) ) :
 		 * Ensures that only one instance of WPUMPD exists in memory at any one
 		 * time. Also prevents needing to define globals all over the place.
 		 *
-		 * @return WPUMPD
+		 * @return WPUM_Personal_Data
 		 */
 		public static function instance() {
 			if ( is_null( self::$_instance ) ) {
 				self::$_instance = new self();
+				self::$_instance->run();
 			}
+
 			return self::$_instance;
+		}
+
+		/**
+		 * Only load the addon on the WPUM core hook, ensuring the plugin is active.
+		 */
+		public function run() {
+			add_action( 'after_wpum_init', array( $this, 'init' ) );
 		}
 
 		/**
 		 * Get things up and running.
 		 */
-		public function __construct() {
-
+		public function init() {
 			// Verify the plugin meets WP and PHP requirements.
 			$this->plugin_can_run();
 
