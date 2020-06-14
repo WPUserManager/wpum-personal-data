@@ -1,3 +1,4 @@
-#vendor
-deploy.sh
+vendor
 composer.lock
+/release
+node_modules
