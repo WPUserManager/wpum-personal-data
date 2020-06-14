@@ -1,10 +1,10 @@
 === WP User Manager Personal Data ===
-Contributors: alessandro.tesoro, wpusermanager
+Contributors: wpusermanager
 Tags: community, member, gdpr, data export, data erasure
 Requires at least: 4.9.6
-Tested up to: 4.9
+Tested up to: 5.4
 Requires PHP: 5.5
-Stable tag: 1.1.4
+Stable tag: 1.1.5
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -40,11 +40,18 @@ Please refer to the [documentation here](https://docs.wpusermanager.com/category
 
 == Changelog ==
 
+= 1.1.5 (14th June 2020) =
+
+- Improvement: Check plugin is built correctly and WP User Manager exists before loading
+
 = Version 1.1.4 =
+
 - Fix: when wp-login.php is locked, requests verification would fail.
 
 = Version 1.1.3 =
+
 - Fix: fatal error when the add-on could not find the activation class.
 
 = Version 1.1.2 =
+
 - Fix: compatibility with older version of php

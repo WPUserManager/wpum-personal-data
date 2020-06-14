@@ -1,8 +1,8 @@
 {
-  "name": "wpum-delete-account",
-  "title": "WPUM Delete Account",
+  "name": "wpum-personal-data",
+  "title": "WPUM Personal Data",
   "description": "Plugin",
-  "version": "1.0.2",
+  "version": "1.1.5",
   "homepage": "https://wpusermanager.com",
   "author": {
     "name": "WP User Manager",
