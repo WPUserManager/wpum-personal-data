@@ -4,7 +4,7 @@ Plugin Name: WPUM Personal Data
 Plugin URI:  https://wpusermanager.com
 Description: Addon for WP User Manager, allow the user to request his personal data and request erasure of personal data from the account page.
 Version:     1.1.4
-Author:      Alessandro Tesoro
+Author:      WP User Manager
 Author URI:  https://wpusermanager.com/
 License:     GPLv3+
 Text Domain: wpum-personal-data
@@ -80,6 +80,10 @@ if ( ! class_exists( 'WPUM_Personal_Data' ) ) :
 		 * Get things up and running.
 		 */
 		public function init() {
+			if ( ! $this->autoload() ) {
+				return;
+			}
+
 			// Verify the plugin meets WP and PHP requirements.
 			$this->plugin_can_run();
 
@@ -88,19 +92,23 @@ if ( ! class_exists( 'WPUM_Personal_Data' ) ) :
 
 			// Plugin is activated now proceed.
 			$this->setup_constants();
-			$this->autoload();
 			$this->includes();
 			$this->init_hooks();
-
 		}
 
 		/**
 		 * Autoload composer and other required classes.
 		 *
-		 * @return void
+		 * @return bool
 		 */
-		private function autoload() {
-			require __DIR__ . '/vendor/autoload.php';
+		protected function autoload() {
+			if ( ! file_exists( __DIR__ . '/vendor' ) || ! file_exists( __DIR__ . '/vendor/autoload.php' ) ) {
+				add_action( 'admin_notices', array( $this, 'vendor_failed_notice' ) );
+
+				return false;
+			}
+
+			return require __DIR__ . '/vendor/autoload.php';
 		}
 
 		/**
@@ -174,9 +182,6 @@ if ( ! class_exists( 'WPUM_Personal_Data' ) ) :
 		 * @return boolean
 		 */
 		public function plugin_can_run() {
-
-			$this->autoload();
-
 			$requirements_check = new WP_Requirements_Check( array(
 				'title' => 'WPUM Personal Data',
 				'php'   => '5.5',
@@ -194,9 +199,6 @@ if ( ! class_exists( 'WPUM_Personal_Data' ) ) :
 		 * @return boolean
 		 */
 		private function addon_can_run() {
-
-			$this->autoload();
-
 			$requirements_check = new WPUM_Extension_Activation(
 				array(
 					'title'        => 'WPUM Personal Data',
@@ -209,6 +211,21 @@ if ( ! class_exists( 'WPUM_Personal_Data' ) ) :
 
 		}
 
+		/**
+		 * Show the Vendor build issue notice.
+		 *
+		 * @since  1.0.0
+		 * @access public
+		 */
+		public function vendor_failed_notice() { ?>
+			<div class="error">
+				<p><?php printf( '<strong>WP User Manager</strong> &mdash; The %s addon plugin cannot be activated as it is missing the vendor directory.', esc_html( 'Personal Data' ) ); ?></p>
+			</div>
+			<?php
+			deactivate_plugins( plugin_basename( __FILE__ ) );
+		}
+
+
 	}
 
 endif;
@@ -216,7 +233,7 @@ endif;
 /**
  * Start the addon.
  *
- * @return object
+ * @return WPUM_Personal_Data
  */
 function WPUMPD() {
 	return WPUM_Personal_Data::instance();
