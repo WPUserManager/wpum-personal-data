@@ -46,7 +46,25 @@ module.exports = function( grunt ) {
 				dest: '<%= pkg.name %>/'
 			}
 		},
+		makepot: {
+			target: {
+				options: {
+					exclude: [
+						'assets/.*', 'images/.*', 'node_modules/.*', 'tests/.*', 'release/.*', 'build/.*'
+					],
+					domainPath: '/languages',
+					mainFile: '<%= pkg.name %>.php',
+					potFilename: '<%= pkg.name %>.pot',
+					potHeaders: {
+						poedit: true,                 // Includes common Poedit headers.
+						'x-poedit-keywordslist': true // Include a list of all possible gettext functions.
+					},
+					type: 'wp-plugin'
+				}
+			}
+		},
 	} );
 
+	grunt.registerTask( 'do_pot', ['makepot'] );
 	grunt.registerTask( 'build', ['clean', 'copy', 'compress'] );
 };
