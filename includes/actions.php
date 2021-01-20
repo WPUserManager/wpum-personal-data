@@ -16,17 +16,17 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Register a new personal data tab within the account page.
  *
  * @param array $tabs
- * @return void
+ *
+ * @return array
  */
 function wpumpd_register_new_account_tabs( $tabs ) {
 
 	$tabs['personal-data'] = [
-		'name'     => esc_html__( 'Personal data', 'wpum-personal-data' ),
+		'name'     => esc_html__( 'Personal Data', 'wpum-personal-data' ),
 		'priority' => 3,
 	];
 
 	return $tabs;
-
 }
 add_filter( 'wpum_get_account_page_tabs', 'wpumpd_register_new_account_tabs' );
 
