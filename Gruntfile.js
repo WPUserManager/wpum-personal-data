@@ -29,7 +29,14 @@ module.exports = function( grunt ) {
 					'!yarn.lock',
 					'!README.md',
 					'!composer.lock',
-					'!composer.json'
+					'!composer.json',
+					'!.github',
+					'!release.json',
+					'!playwright.config.ts',
+					'!tsconfig.json',
+					'!.wp-env.json',
+					'!.wp-env.override.json',
+					'!test-results/**'
 				],
 				dest: 'release/<%= pkg.version %>/'
 			}
