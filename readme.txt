@@ -2,7 +2,7 @@
 Contributors: wpusermanager
 Tags: community, member, gdpr, data export, data erasure
 Requires at least: 4.9.6
-Tested up to: 5.4
+Tested up to: 7.1
 Requires PHP: 5.5
 Stable tag: 1.1.5
 License: GPLv2 or later
