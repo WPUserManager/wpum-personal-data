@@ -1,0 +1,13 @@
+includes:
+    - vendor/szepeviktor/phpstan-wordpress/extension.neon
+parameters:
+    level: 0
+    paths:
+        - wpum-personal-data.php
+        - includes/
+    scanDirectories:
+        - vendor/wp-user-manager
+    scanFiles:
+        - phpstan-stubs.php
+    bootstrapFiles:
+        - vendor/autoload.php

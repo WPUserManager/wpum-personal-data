@@ -1,4 +1,13 @@
 vendor
-composer.lock
+*.zip
 /release
 node_modules
+
+# Test artifacts
+.wp-env.override.json
+tests/codeception.yml
+tests/.env.local
+tests/_output/
+playwright-report/
+test-results/
+tests/e2e/.state.json

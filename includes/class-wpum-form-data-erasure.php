@@ -102,10 +102,15 @@ class WPUM_Form_Data_Erasure extends WPUM_Form {
 	 */
 	public function submit() {
 		$this->init_fields();
+
+		// A form that comes back after an error never shows the password that was typed.
+		$fields = $this->get_fields( 'personal_data_erasure' );
+		unset( $fields['password_erasure']['value'] );
+
 		$data = [
 			'form'         => $this->form_name,
 			'action'       => $this->get_action(),
-			'fields'       => $this->get_fields( 'personal_data_erasure' ),
+			'fields'       => $fields,
 			'step'         => $this->get_step(),
 			'step_name'    => $this->steps[ $this->get_step_key( $this->get_step() ) ]['name'],
 			'submit_label' => esc_html__( 'Request personal data erasure', 'wpum-personal-data' ),

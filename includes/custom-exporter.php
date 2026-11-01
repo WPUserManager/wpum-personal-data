@@ -16,7 +16,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Register a new exporter for custom fields registered through WPUM.
  *
  * @param array $exporters
- * @return void
+ * @return array
  */
 function wpumpd_plugin_register_exporters( $exporters ) {
 
