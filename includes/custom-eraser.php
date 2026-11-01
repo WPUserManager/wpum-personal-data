@@ -132,7 +132,8 @@ function wpumpd_erase_file( $url, $path ) {
 		return false;
 	}
 
-	if ( attachment_url_to_postid( $url ) ) {
+	// By the file's own address, as a stored URL can be encoded or carry a query string.
+	if ( attachment_url_to_postid( trailingslashit( $uploads['baseurl'] ) . $relative ) ) {
 		return false;
 	}
 
@@ -143,7 +144,8 @@ function wpumpd_erase_file( $url, $path ) {
 
 	$in_use = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->usermeta} WHERE meta_value LIKE %s", $pattern ) ); // phpcs:ignore
 
-	if ( $in_use ) {
+	// Null means the check itself failed, and a file that can't be checked stays.
+	if ( null === $in_use || $in_use ) {
 		return false;
 	}
 

@@ -516,6 +516,44 @@ class EraserTest extends AddonTestCase {
 		);
 	}
 
+	public function test_a_library_file_stored_with_a_query_string_is_kept_and_reported() {
+		list( $path, $url ) = $this->create_upload( 'wpum-personal-data-test-library-query.pdf' );
+
+		wp_insert_attachment(
+			array(
+				'post_title'     => 'In the media library',
+				'post_mime_type' => 'application/pdf',
+				'post_status'    => 'inherit',
+			),
+			$path
+		);
+
+		$member = $this->member_with_a_file( $path, add_query_arg( 'v', '2', $url ) );
+
+		$this->assertFileKeptAndReported( $this->erase( $this->email_of( $member ) ), $path );
+	}
+
+	public function test_a_file_is_kept_if_the_in_use_check_fails() {
+		list( $path, $url ) = $this->create_upload( 'wpum-personal-data-test-check-fails.pdf' );
+
+		$member = $this->member_with_a_file( $path, $url );
+
+		$break_the_check = function ( $query ) {
+			return false !== strpos( $query, 'SELECT COUNT(*)' ) && false !== strpos( $query, 'meta_value LIKE' ) ? 'SELECT no_such_column FROM no_such_table' : $query;
+		};
+
+		add_filter( 'query', $break_the_check );
+
+		global $wpdb;
+		$suppressed = $wpdb->suppress_errors( true );
+		$result     = $this->erase( $this->email_of( $member ) );
+		$wpdb->suppress_errors( $suppressed );
+
+		remove_filter( 'query', $break_the_check );
+
+		$this->assertFileKeptAndReported( $result, $path );
+	}
+
 	public function test_a_file_in_the_media_library_is_kept_and_reported() {
 		list( $path, $url ) = $this->create_upload( 'wpum-personal-data-test-library.pdf' );
 
