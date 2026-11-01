@@ -705,6 +705,7 @@ abstract class AddonTestCase extends \Codeception\TestCase\WPTestCase {
 		$uploads = wp_upload_dir();
 		$path    = trailingslashit( $uploads['basedir'] ) . $name;
 
+		wp_mkdir_p( dirname( $path ) );
 		file_put_contents( $path, 'A file a member uploaded.' ); // phpcs:ignore
 		$this->files[] = $path;
 

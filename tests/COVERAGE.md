@@ -8,9 +8,10 @@ adds or changes a test. A feature with no test is a gap, not an oversight to hid
   `wp wpumpd-e2e` in `tests/mu-plugins/wpumpd-e2e.php`, which creates the field and members the
   specs use and drops mail, as wp-env has no mail server.
 - **Custom fields**: the Custom Fields addon is private, so this repo's CI can't check it out.
-  Its fields reach the exporter and eraser through Carbon Fields, and both suites register
-  test fields the same way, with the datastore it uses and the Carbon Fields type it picks for
-  each WPUM field type. If that addon changes how it registers fields, these tests won't notice.
+  Its fields reach the exporter through Carbon Fields, and both suites register test fields the
+  same way, with the datastore it uses and the Carbon Fields type it picks for each WPUM field
+  type. If that addon changes how it registers fields, these tests won't notice. The eraser
+  reads the stored meta itself.
 - Status: ✅ covered, ❌ not covered, 🐞 `known-bug` test that fails until the bug is fixed.
   A blank cell means the other suite covers it.
 
@@ -19,13 +20,11 @@ adds or changes a test. A feature with no test is a gap, not an oversight to hid
 Tests for open bugs are tagged `known-bug` (WPUnit `@group known-bug`, Playwright
 `@known-bug`), and CI skips them. The fix for a bug removes the tag from its tests. To run
 them: `codecept run wpunit -g known-bug` or `npx playwright test --grep @known-bug`.
-Not every `known-bug` test is listed here.
 
 | Bug | Test |
 |---|---|
 | A User or Role field allowing several values, a Taxonomy field or a Repeater is exported as an array, which WordPress can't write to the export file | `ExporterTest::test_a_field_with_several_values_exports_as_text` |
 | A dropdown or radio the member left empty is exported as its first option: Carbon Fields answers with that for a select with no value | `ExporterTest::test_a_dropdown_the_member_left_empty_is_left_out` |
-| The same dropdown makes a clean erasure report that a value couldn't be removed | `EraserTest::test_a_dropdown_the_member_left_empty_is_not_reported_as_kept` |
 | With the whole site locked and wp-login.php not, the email's link goes to WPUM's login page, where nothing handles it, so the request can't be confirmed | `ConfirmationTest::test_the_link_works_when_the_whole_site_is_locked` |
 | `user_request_action_confirmed` doesn't fire when the addon confirms a request | `ConfirmationTest::test_other_plugins_hear_about_the_confirmation` |
 | When the confirmation email can't be sent the member is told it was, and the open request refuses their next try | `RequestTest::test_a_mail_failure_is_reported_to_the_member` |
@@ -36,8 +35,13 @@ Behaviour that's pinned by a passing test but may not be what's wanted:
 
 - **The addon doesn't handle export files.** WordPress writes them, stores them and emails the
   link, and the addon adds no filter on any of that (`ExporterTest`).
-- **Custom fields are what this addon handles.** Name, email, bio and the like are left to
-  WordPress, which doesn't erase them (`EraserTest`).
+- **Custom fields, the profile picture and the cover are what this addon handles.** Name, email,
+  bio and the like are left to WordPress, which doesn't erase them (`EraserTest`).
+- **A file is only deleted when that's safe.** It has to be inside the uploads folder, have a
+  recorded path that matches its URL, not be in the Media Library, and not appear in anyone's
+  user meta. Otherwise the value goes, the file stays, and the erasure reports it as kept with a
+  message (`EraserTest`). Files in repeater rows have no recorded path, so they're always kept
+  and reported. A file linked only from post content or an option doesn't count as in use.
 - **An erasure leaves the account**, its role and its login (`EraserTest`).
 - **A wrong, used or expired link does nothing visible** on the front end: the visitor just gets
   the login page. wp-login.php shows an error (`ConfirmationTest`).
@@ -46,8 +50,8 @@ Not tested anywhere:
 
 - **Multisite.** Neither suite runs on it.
 - **The real Custom Fields addon**, see above.
-- **Repeaters**, as rows. A repeater's value is removed along with its key, and the export
-  bug above covers its output through a field with several values.
+- **Repeaters through the real form.** `EraserTest` stores a repeater's rows directly, and the
+  export bug above covers its output through a field with several values.
 - **WordPress's own export run**: the admin's Send export button, the zip and the email.
   The E2E suite runs the addon's exporter and eraser through WP-CLI.
 - **The missing vendor directory notice** (`vendor_failed_notice`), which deactivates the plugin.
@@ -89,6 +93,7 @@ Each row is tested on both the export and the erasure form.
 | Posts with the nonce, valid for the current member | ✅ | |
 | Posts nothing that identifies a user | ✅ | |
 | Translated labels escaped | ✅ | |
+| The password field comes back blank after a wrong password or a refused request | ✅ | |
 | The hooks before and after the form fire | ✅ | |
 | The fields filter adds fields, and a required one is enforced | ✅ | |
 | Processes on the `wp` hook; WPUM loads the form when it's posted | ✅ | |
@@ -177,6 +182,9 @@ The addon handles the link when wp-login.php is locked. WordPress handles it oth
 | Registered with WordPress; other erasers kept | ✅ | |
 | An empty or unknown email erases nothing | ✅ | |
 | Text, checkbox, dropdown, radio, multiselect and multiple checkbox values | ✅ | ✅ (text) |
+| A stored value of `0` | ✅ | |
+| An empty stored value goes quietly | ✅ | |
+| Fields Carbon Fields doesn't know, such as with the Custom Fields addon inactive | ✅ | |
 | Reports what it removed | ✅ | ✅ |
 | A value that can't be removed is reported as kept, with a message | ✅ | |
 | Other members keep their values | ✅ | ✅ |
@@ -185,6 +193,16 @@ The addon handles the link when wp-login.php is locked. WordPress handles it oth
 | Meta that isn't a custom field stays | ✅ | |
 | Primary fields stay | ✅ | |
 | Nothing stored, nothing reported | ✅ | |
-| A dropdown left empty isn't reported as kept | 🐞 | |
+| A dropdown left empty isn't reported as kept | ✅ | |
 | An erased value is gone from the next export | ✅ | |
+| A file field goes with its path and its file, in any folder of uploads | ✅ | |
+| The profile picture and cover go with their paths and files | ✅ | |
+| A file used for both the picture and the cover goes | ✅ | |
+| A file that's already gone isn't reported | ✅ | |
+| A picture hosted elsewhere goes without a report | ✅ | |
+| Kept and reported: a file outside uploads, by path, climbing out, or through a link | ✅ | |
+| Kept and reported: a path that isn't the stored file, or no recorded path | ✅ | |
+| Kept and reported: a file another member or field uses, or in the Media Library | ✅ | |
+| Kept and reported: a file in a repeater, or one that can't be deleted | ✅ | |
+| A file stays when its value can't be removed | ✅ | |
 | Members can't run another member's request through admin-ajax | | ✅ |

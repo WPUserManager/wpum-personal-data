@@ -189,7 +189,6 @@ class RequestTest extends AddonTestCase {
 
 	/**
 	 * @dataProvider forms
-	 * @group known-bug
 	 *
 	 * @param string $form
 	 */
@@ -203,7 +202,6 @@ class RequestTest extends AddonTestCase {
 
 	/**
 	 * @dataProvider forms
-	 * @group known-bug
 	 *
 	 * @param string $form
 	 */

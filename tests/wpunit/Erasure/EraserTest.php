@@ -1,7 +1,8 @@
 <?php
 /**
- * The eraser removes WPUM's custom fields when an administrator runs a confirmed erasure
- * request in WordPress. It has to remove the right values, and nothing else.
+ * The eraser removes WPUM's custom fields, the profile picture and cover, and the files uploaded
+ * to them, when an administrator runs a confirmed erasure request in WordPress. It has to remove
+ * the right data, nothing else, and say what it kept.
  */
 class EraserTest extends AddonTestCase {
 
@@ -217,11 +218,8 @@ class EraserTest extends AddonTestCase {
 	}
 
 	/**
-	 * Carbon Fields answers with the first option for a select that has no value, so the
-	 * eraser tries to remove a value that isn't there, delete_user_meta() says it failed,
-	 * and a clean erasure is reported as incomplete.
-	 *
-	 * @group known-bug
+	 * The eraser goes by what's stored. Carbon Fields answers with the first option for a
+	 * select that has no value, which must not count as a value to remove.
 	 */
 	public function test_a_dropdown_the_member_left_empty_is_not_reported_as_kept() {
 		$this->create_field( 'Size', 'dropdown', 'wpum_size', array( 'dropdown_options' => $this->field_options() ) );
@@ -230,40 +228,268 @@ class EraserTest extends AddonTestCase {
 		$this->assertSame( $this->nothing_to_erase(), $this->erase( $this->email_of( $member ) ) );
 	}
 
-	/**
-	 * @group known-bug
-	 */
 	public function test_a_value_of_zero_is_erased() {
 		$this->create_field( 'Age', 'text', 'wpum_age' );
 		$member = $this->create_member();
 		carbon_set_user_meta( $member, 'wpum_age', '0' );
 
-		$this->erase( $this->email_of( $member ) );
-
+		$this->assertTrue( $this->erase( $this->email_of( $member ) )['items_removed'] );
 		$this->assertFalse( metadata_exists( 'user', $member, 'wpum_age' ) );
 	}
 
 	/**
-	 * @group known-bug
+	 * Nothing about the member was in it, so there's nothing to report.
 	 */
-	public function test_a_file_field_is_erased_with_its_file() {
-		$this->create_field( 'CV', 'file', 'wpum_file_field_cv' );
+	public function test_an_empty_stored_value_is_removed_quietly() {
+		$this->create_field( 'Phone', 'text', 'wpum_phone' );
 		$member = $this->create_member();
+		update_user_meta( $member, 'wpum_phone', '' );
 
-		list( $path, $url ) = $this->create_upload( 'wpum-personal-data-test-cv.pdf' );
+		$this->assertSame( $this->nothing_to_erase(), $this->erase( $this->email_of( $member ) ) );
+		$this->assertFalse( metadata_exists( 'user', $member, 'wpum_phone' ) );
+	}
+
+	/**
+	 * Fields are registered with Carbon Fields by the Custom Fields addon, and the value is
+	 * erased whether that addon is active or not.
+	 */
+	public function test_a_field_carbon_fields_does_not_know_is_erased() {
+		$this->create_field( 'Nickname', 'text', 'wpum_not_registered' );
+		$member = $this->create_member();
+		update_user_meta( $member, 'wpum_not_registered', 'Ada' );
+
+		$this->assertTrue( $this->erase( $this->email_of( $member ) )['items_removed'] );
+		$this->assertFalse( metadata_exists( 'user', $member, 'wpum_not_registered' ) );
+	}
+
+	/**
+	 * A member with a file in their CV field.
+	 *
+	 * @param string $path
+	 * @param string $url
+	 *
+	 * @return int
+	 */
+	private function member_with_a_file( $path, $url ) {
+		$this->create_field( 'CV', 'file', 'wpum_file_field_cv' );
+
+		$member = $this->create_member();
 		update_user_meta( $member, 'wpum_file_field_cv', $url );
 		update_user_meta( $member, 'wpum_file_field_cv_path', $path );
 
-		$this->erase( $this->email_of( $member ) );
+		return $member;
+	}
+
+	/**
+	 * Assert the file stayed on disk, the value went, and the erasure says so.
+	 *
+	 * @param array  $result
+	 * @param string $path
+	 * @param string $name The name in the message.
+	 */
+	private function assertFileKeptAndReported( $result, $path, $name = 'CV' ) {
+		$this->assertFileExists( $path );
+		$this->assertTrue( $result['items_removed'] );
+		$this->assertTrue( $result['items_retained'] );
+		$this->assertCount( 1, $result['messages'] );
+		$this->assertStringContainsString( $name, $result['messages'][0] );
+		$this->assertStringContainsString( 'file was kept', $result['messages'][0] );
+	}
+
+	public function test_a_file_field_is_erased_with_its_file() {
+		list( $path, $url ) = $this->create_upload( 'wpum-personal-data-test-cv.pdf' );
+
+		$member = $this->member_with_a_file( $path, $url );
+		$result = $this->erase( $this->email_of( $member ) );
 
 		$this->assertFalse( metadata_exists( 'user', $member, 'wpum_file_field_cv' ) );
 		$this->assertFalse( metadata_exists( 'user', $member, 'wpum_file_field_cv_path' ) );
 		$this->assertFileDoesNotExist( $path );
+		$this->assertTrue( $result['items_removed'] );
+		$this->assertFalse( $result['items_retained'] );
+		$this->assertSame( array(), $result['messages'] );
 	}
 
 	/**
-	 * @group known-bug
+	 * Uploads go into a dated folder of their own, with whatever the file was called.
 	 */
+	public function test_a_file_in_a_subfolder_is_erased() {
+		list( $path, $url ) = $this->create_upload( 'wp-user-manager-uploads/2026/11/my_cv 100%.pdf' );
+
+		$member = $this->member_with_a_file( $path, str_replace( array( ' ', '%.' ), array( '%20', '%25.' ), $url ) );
+		$result = $this->erase( $this->email_of( $member ) );
+
+		$this->assertFileDoesNotExist( $path );
+		$this->assertFalse( $result['items_retained'] );
+	}
+
+	public function test_a_file_already_gone_is_not_reported() {
+		list( $path, $url ) = $this->create_upload( 'wpum-personal-data-test-gone.pdf' );
+
+		$member = $this->member_with_a_file( $path, $url );
+		unlink( $path ); // phpcs:ignore
+
+		$result = $this->erase( $this->email_of( $member ) );
+
+		$this->assertTrue( $result['items_removed'] );
+		$this->assertFalse( $result['items_retained'] );
+	}
+
+	public function test_a_file_outside_the_uploads_folder_is_kept_and_reported() {
+		$path          = sys_get_temp_dir() . '/wpum-personal-data-test-outside.pdf';
+		$this->files[] = $path;
+		file_put_contents( $path, 'Not an upload.' ); // phpcs:ignore
+
+		$member = $this->member_with_a_file( $path, 'http://localhost/wp-content/uploads/wpum-personal-data-test-outside.pdf' );
+
+		$this->assertFileKeptAndReported( $this->erase( $this->email_of( $member ) ), $path );
+		$this->assertFalse( metadata_exists( 'user', $member, 'wpum_file_field_cv_path' ) );
+	}
+
+	public function test_a_path_that_climbs_out_of_the_uploads_folder_is_kept_and_reported() {
+		$uploads       = wp_upload_dir();
+		$path          = realpath( sys_get_temp_dir() ) . '/wpum-personal-data-test-above.pdf';
+		$climb         = str_repeat( '/..', substr_count( realpath( $uploads['basedir'] ), '/' ) );
+		$this->files[] = $path;
+		file_put_contents( $path, 'Not an upload.' ); // phpcs:ignore
+
+		$member = $this->member_with_a_file( $uploads['basedir'] . $climb . $path, $uploads['baseurl'] . $climb . $path );
+
+		$this->assertFileKeptAndReported( $this->erase( $this->email_of( $member ) ), $path );
+	}
+
+	public function test_a_link_out_of_the_uploads_folder_is_kept_and_reported() {
+		$uploads       = wp_upload_dir();
+		$target        = sys_get_temp_dir() . '/wpum-personal-data-test-target.pdf';
+		$link          = $uploads['basedir'] . '/wpum-personal-data-test-link.pdf';
+		$this->files[] = $link;
+		$this->files[] = $target;
+		file_put_contents( $target, 'Not an upload.' ); // phpcs:ignore
+		symlink( $target, $link );
+
+		$member = $this->member_with_a_file( $link, $uploads['baseurl'] . '/wpum-personal-data-test-link.pdf' );
+
+		$this->assertFileKeptAndReported( $this->erase( $this->email_of( $member ) ), $target );
+	}
+
+	/**
+	 * The path and the URL have to be the same file.
+	 */
+	public function test_a_path_that_is_not_the_stored_file_is_kept_and_reported() {
+		list( $path )        = $this->create_upload( 'wpum-personal-data-test-mine.pdf' );
+		list( , $other_url ) = $this->create_upload( 'wpum-personal-data-test-other.pdf' );
+
+		$member = $this->member_with_a_file( $path, $other_url );
+
+		$this->assertFileKeptAndReported( $this->erase( $this->email_of( $member ) ), $path );
+	}
+
+	public function test_a_file_another_member_uses_is_kept_and_reported() {
+		list( $path, $url ) = $this->create_upload( 'wpum-personal-data-test-shared.pdf' );
+
+		$member = $this->member_with_a_file( $path, $url );
+		$other  = $this->create_member();
+		update_user_meta( $other, 'wpum_file_field_cv', $url );
+
+		$this->assertFileKeptAndReported( $this->erase( $this->email_of( $member ) ), $path );
+		$this->assertSame( $url, get_user_meta( $other, 'wpum_file_field_cv', true ) );
+	}
+
+	public function test_a_file_another_field_uses_is_kept_and_reported() {
+		list( $path, $url ) = $this->create_upload( 'wpum-personal-data-test-reused.pdf' );
+
+		$member = $this->member_with_a_file( $path, $url );
+		update_user_meta( $member, 'some_plugins_attachments', array( 'files' => array( $path ) ) );
+
+		$this->assertFileKeptAndReported( $this->erase( $this->email_of( $member ) ), $path );
+	}
+
+	public function test_a_file_in_the_media_library_is_kept_and_reported() {
+		list( $path, $url ) = $this->create_upload( 'wpum-personal-data-test-library.pdf' );
+
+		wp_insert_attachment(
+			array(
+				'post_title'     => 'In the media library',
+				'post_mime_type' => 'application/pdf',
+				'post_status'    => 'inherit',
+			),
+			$path
+		);
+
+		$member = $this->member_with_a_file( $path, $url );
+
+		$this->assertFileKeptAndReported( $this->erase( $this->email_of( $member ) ), $path );
+	}
+
+	/**
+	 * Only WPUM's upload handling records a path, so without one the file may not be theirs.
+	 */
+	public function test_a_file_with_no_recorded_path_is_kept_and_reported() {
+		list( $path, $url ) = $this->create_upload( 'wpum-personal-data-test-no-path.pdf' );
+
+		$this->create_field( 'CV', 'file', 'wpum_file_field_cv' );
+		$member = $this->create_member();
+		update_user_meta( $member, 'wpum_file_field_cv', $url );
+
+		$this->assertFileKeptAndReported( $this->erase( $this->email_of( $member ) ), $path );
+		$this->assertFalse( metadata_exists( 'user', $member, 'wpum_file_field_cv' ) );
+	}
+
+	/**
+	 * Repeaters keep the URLs of their files among the other values in a row, with no path.
+	 */
+	public function test_a_file_in_a_repeater_is_kept_and_reported() {
+		list( $path, $url ) = $this->create_upload( 'wpum-personal-data-test-row.pdf' );
+
+		$this->create_field( 'Jobs', 'repeater', 'wpum_jobs' );
+		$member = $this->create_member();
+		update_user_meta(
+			$member,
+			'wpum_jobs',
+			array(
+				array(
+					'wpum_title'  => 'Mathematician',
+					'wpum_letter' => $url,
+				),
+			)
+		);
+
+		$this->assertFileKeptAndReported( $this->erase( $this->email_of( $member ) ), $path, 'Jobs' );
+		$this->assertFalse( metadata_exists( 'user', $member, 'wpum_jobs' ) );
+	}
+
+	public function test_a_file_that_can_not_be_deleted_is_reported() {
+		list( $path, $url ) = $this->create_upload( 'wpum-personal-data-test-stuck.pdf' );
+
+		$member = $this->member_with_a_file( $path, $url );
+		add_filter( 'wp_delete_file', '__return_empty_string' );
+
+		$this->assertFileKeptAndReported( $this->erase( $this->email_of( $member ) ), $path );
+	}
+
+	public function test_a_file_stays_when_its_value_can_not_be_removed() {
+		list( $path, $url ) = $this->create_upload( 'wpum-personal-data-test-held.pdf' );
+
+		$member = $this->member_with_a_file( $path, $url );
+
+		add_filter(
+			'delete_user_metadata',
+			function ( $check, $object_id, $meta_key ) {
+				return 'wpum_file_field_cv' === $meta_key ? false : $check;
+			},
+			10,
+			3
+		);
+
+		$result = $this->erase( $this->email_of( $member ) );
+
+		$this->assertFileExists( $path );
+		$this->assertFalse( $result['items_removed'] );
+		$this->assertTrue( $result['items_retained'] );
+		$this->assertCount( 1, $result['messages'] );
+		$this->assertStringContainsString( 'was unable to be removed', $result['messages'][0] );
+	}
+
 	public function test_the_profile_picture_and_cover_are_erased_with_their_files() {
 		$member = $this->create_member();
 
@@ -275,7 +501,10 @@ class EraserTest extends AddonTestCase {
 		update_user_meta( $member, 'user_cover', $cover_url );
 		update_user_meta( $member, '_user_cover_path', $cover_path );
 
-		$this->assertTrue( $this->erase( $this->email_of( $member ) )['items_removed'] );
+		$result = $this->erase( $this->email_of( $member ) );
+
+		$this->assertTrue( $result['items_removed'] );
+		$this->assertFalse( $result['items_retained'] );
 
 		foreach ( array( 'current_user_avatar', '_current_user_avatar_path', 'user_cover', '_user_cover_path' ) as $key ) {
 			$this->assertFalse( metadata_exists( 'user', $member, $key ), $key );
@@ -283,5 +512,50 @@ class EraserTest extends AddonTestCase {
 
 		$this->assertFileDoesNotExist( $avatar_path );
 		$this->assertFileDoesNotExist( $cover_path );
+	}
+
+	/**
+	 * The member's own values have all gone before the file is looked at.
+	 */
+	public function test_a_file_used_for_the_picture_and_the_cover_is_erased() {
+		$member = $this->create_member();
+
+		list( $path, $url ) = $this->create_upload( 'wpum-personal-data-test-both.png' );
+
+		foreach ( array( 'current_user_avatar', 'user_cover' ) as $key ) {
+			update_user_meta( $member, $key, $url );
+		}
+		update_user_meta( $member, '_current_user_avatar_path', $path );
+		update_user_meta( $member, '_user_cover_path', $path );
+
+		$result = $this->erase( $this->email_of( $member ) );
+
+		$this->assertFileDoesNotExist( $path );
+		$this->assertFalse( $result['items_retained'] );
+	}
+
+	public function test_a_picture_another_member_uses_is_kept_and_reported() {
+		list( $path, $url ) = $this->create_upload( 'wpum-personal-data-test-team.png' );
+
+		$member = $this->create_member();
+		update_user_meta( $member, 'current_user_avatar', $url );
+		update_user_meta( $member, '_current_user_avatar_path', $path );
+		update_user_meta( $this->create_member(), 'current_user_avatar', $url );
+
+		$this->assertFileKeptAndReported( $this->erase( $this->email_of( $member ) ), $path, 'User avatar' );
+	}
+
+	/**
+	 * A picture on another site leaves nothing here to delete.
+	 */
+	public function test_a_picture_hosted_elsewhere_is_removed_without_a_report() {
+		$member = $this->create_member();
+		update_user_meta( $member, 'current_user_avatar', 'https://example.test/avatar.png' );
+
+		$result = $this->erase( $this->email_of( $member ) );
+
+		$this->assertFalse( metadata_exists( 'user', $member, 'current_user_avatar' ) );
+		$this->assertTrue( $result['items_removed'] );
+		$this->assertFalse( $result['items_retained'] );
 	}
 }
