@@ -373,6 +373,69 @@ class EraserTest extends AddonTestCase {
 	}
 
 	/**
+	 * The URL has to be exactly the recorded file's address in the uploads folder.
+	 *
+	 * @dataProvider other_urls
+	 *
+	 * @param callable $change Turns the file's URL into the stored one.
+	 */
+	public function test_a_url_that_is_not_the_recorded_file_is_kept_and_reported( $change ) {
+		list( $path, $url ) = $this->create_upload( 'wpum-personal-data-test-recorded.pdf' );
+
+		$member = $this->member_with_a_file( $path, call_user_func( $change, $url ) );
+
+		$this->assertFileKeptAndReported( $this->erase( $this->email_of( $member ) ), $path );
+	}
+
+	public function other_urls() {
+		return array(
+			'a longer name ending the same' => array(
+				function ( $url ) {
+					return str_replace( '/wpum-personal-data-test-recorded.pdf', '/other-wpum-personal-data-test-recorded.pdf', $url );
+				},
+			),
+			'another folder'                => array(
+				function ( $url ) {
+					return str_replace( '/wpum-personal-data-test-recorded.pdf', '/2026/11/wpum-personal-data-test-recorded.pdf', $url );
+				},
+			),
+			'a path ending the same'        => array(
+				function ( $url ) {
+					return str_replace( '/uploads/', '/uploads/backup/uploads/', $url );
+				},
+			),
+			'another host'                  => array(
+				function ( $url ) {
+					return preg_replace( '#^(https?://)[^/:]+#', '$1example.test', $url );
+				},
+			),
+			'another port'                  => array(
+				function ( $url ) {
+					return preg_replace( '#^(https?://[^/:]+)(:\d+)?#', '$1:1234', $url );
+				},
+			),
+			'no host'                       => array(
+				function ( $url ) {
+					return (string) wp_parse_url( $url, PHP_URL_PATH );
+				},
+			),
+		);
+	}
+
+	/**
+	 * A site moved to https keeps its old URLs in meta, and they're still the same file.
+	 */
+	public function test_a_url_on_the_other_scheme_is_erased() {
+		list( $path, $url ) = $this->create_upload( 'wpum-personal-data-test-scheme.pdf' );
+
+		$member = $this->member_with_a_file( $path, str_replace( 'http://', 'https://', $url ) );
+		$result = $this->erase( $this->email_of( $member ) );
+
+		$this->assertFileDoesNotExist( $path );
+		$this->assertFalse( $result['items_retained'] );
+	}
+
+	/**
 	 * The path and the URL have to be the same file.
 	 */
 	public function test_a_path_that_is_not_the_stored_file_is_kept_and_reported() {
@@ -402,6 +465,55 @@ class EraserTest extends AddonTestCase {
 		update_user_meta( $member, 'some_plugins_attachments', array( 'files' => array( $path ) ) );
 
 		$this->assertFileKeptAndReported( $this->erase( $this->email_of( $member ) ), $path );
+	}
+
+	/**
+	 * However another member's value writes the file's name, it's still the same file.
+	 *
+	 * @dataProvider references
+	 *
+	 * @param callable $reference Turns the file's encoded URL into what the other member has stored.
+	 */
+	public function test_a_file_another_member_refers_to_in_any_form_is_kept_and_reported( $reference ) {
+		list( $path, $url ) = $this->create_upload( 'wp-user-manager-uploads/2026/11/shared cv (1).pdf' );
+
+		$encoded = str_replace( array( ' ', '(', ')' ), array( '%20', '%28', '%29' ), $url );
+		$member  = $this->member_with_a_file( $path, $encoded );
+
+		update_user_meta( $this->create_member(), 'some_plugins_file', call_user_func( $reference, $encoded ) );
+
+		$this->assertFileKeptAndReported( $this->erase( $this->email_of( $member ) ), $path );
+	}
+
+	public function references() {
+		return array(
+			'a URL-encoded URL'             => array(
+				function ( $encoded ) {
+					return $encoded;
+				},
+			),
+			'a URL in a query string'       => array(
+				function ( $encoded ) {
+					return 'https://example.test/?file=' . rawurlencode( rawurldecode( $encoded ) );
+				},
+			),
+			'a decoded URL'                 => array( 'rawurldecode' ),
+			'spaces encoded, brackets left' => array(
+				function ( $encoded ) {
+					return str_replace( array( '%28', '%29' ), array( '(', ')' ), $encoded );
+				},
+			),
+			'plus signs for spaces'         => array(
+				function ( $encoded ) {
+					return str_replace( '%20', '+', $encoded );
+				},
+			),
+			'inside a serialized value'     => array(
+				function ( $encoded ) {
+					return array( 'files' => array( array( 'url' => $encoded ) ) );
+				},
+			),
+		);
 	}
 
 	public function test_a_file_in_the_media_library_is_kept_and_reported() {
@@ -467,27 +579,68 @@ class EraserTest extends AddonTestCase {
 		$this->assertFileKeptAndReported( $this->erase( $this->email_of( $member ) ), $path );
 	}
 
-	public function test_a_file_stays_when_its_value_can_not_be_removed() {
+	/**
+	 * Refuse to delete one meta key, until the returned filter is removed.
+	 *
+	 * @param string $refused_key
+	 *
+	 * @return callable
+	 */
+	private function refuse_to_delete( $refused_key ) {
+		$filter = function ( $check, $object_id, $meta_key ) use ( $refused_key ) {
+			return $refused_key === $meta_key ? false : $check;
+		};
+		add_filter( 'delete_user_metadata', $filter, 10, 3 );
+
+		return $filter;
+	}
+
+	public function test_a_file_stays_when_its_value_can_not_be_removed_and_a_retry_erases_it() {
 		list( $path, $url ) = $this->create_upload( 'wpum-personal-data-test-held.pdf' );
 
 		$member = $this->member_with_a_file( $path, $url );
-
-		add_filter(
-			'delete_user_metadata',
-			function ( $check, $object_id, $meta_key ) {
-				return 'wpum_file_field_cv' === $meta_key ? false : $check;
-			},
-			10,
-			3
-		);
+		$filter = $this->refuse_to_delete( 'wpum_file_field_cv' );
 
 		$result = $this->erase( $this->email_of( $member ) );
 
 		$this->assertFileExists( $path );
+		$this->assertTrue( metadata_exists( 'user', $member, 'wpum_file_field_cv' ) );
+		$this->assertTrue( metadata_exists( 'user', $member, 'wpum_file_field_cv_path' ), 'A retry needs the path.' );
 		$this->assertFalse( $result['items_removed'] );
 		$this->assertTrue( $result['items_retained'] );
 		$this->assertCount( 1, $result['messages'] );
 		$this->assertStringContainsString( 'was unable to be removed', $result['messages'][0] );
+
+		remove_filter( 'delete_user_metadata', $filter, 10 );
+
+		$retry = $this->erase( $this->email_of( $member ) );
+
+		$this->assertFileDoesNotExist( $path );
+		$this->assertFalse( metadata_exists( 'user', $member, 'wpum_file_field_cv' ) );
+		$this->assertFalse( metadata_exists( 'user', $member, 'wpum_file_field_cv_path' ) );
+		$this->assertTrue( $retry['items_removed'] );
+		$this->assertFalse( $retry['items_retained'] );
+	}
+
+	/**
+	 * With the URL gone the file can't be matched to it, so a retry keeps it and says so.
+	 */
+	public function test_a_file_stays_when_its_path_can_not_be_removed_and_a_retry_reports_it() {
+		list( $path, $url ) = $this->create_upload( 'wpum-personal-data-test-path-held.pdf' );
+
+		$member = $this->member_with_a_file( $path, $url );
+		$filter = $this->refuse_to_delete( 'wpum_file_field_cv_path' );
+
+		$result = $this->erase( $this->email_of( $member ) );
+
+		$this->assertFileExists( $path );
+		$this->assertTrue( $result['items_retained'] );
+		$this->assertStringContainsString( 'was unable to be removed', $result['messages'][0] );
+
+		remove_filter( 'delete_user_metadata', $filter, 10 );
+
+		$this->assertFileKeptAndReported( $this->erase( $this->email_of( $member ) ), $path );
+		$this->assertFalse( metadata_exists( 'user', $member, 'wpum_file_field_cv_path' ) );
 	}
 
 	public function test_the_profile_picture_and_cover_are_erased_with_their_files() {

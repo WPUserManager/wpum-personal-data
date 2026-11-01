@@ -37,11 +37,15 @@ Behaviour that's pinned by a passing test but may not be what's wanted:
   link, and the addon adds no filter on any of that (`ExporterTest`).
 - **Custom fields, the profile picture and the cover are what this addon handles.** Name, email,
   bio and the like are left to WordPress, which doesn't erase them (`EraserTest`).
-- **A file is only deleted when that's safe.** It has to be inside the uploads folder, have a
-  recorded path that matches its URL, not be in the Media Library, and not appear in anyone's
-  user meta. Otherwise the value goes, the file stays, and the erasure reports it as kept with a
-  message (`EraserTest`). Files in repeater rows have no recorded path, so they're always kept
-  and reported. A file linked only from post content or an option doesn't count as in use.
+- **A file is only deleted when that's safe.** It has to be inside the uploads folder, its stored
+  URL has to be exactly that file's address on this site's host and port, it can't be in the Media
+  Library, and it can't appear in anyone's user meta, in any URL encoding. Otherwise the value
+  goes, the file stays, and the erasure reports it as kept with a message (`EraserTest`). Files in
+  repeater rows have no recorded path, so they're always kept and reported. URLs still on a site's
+  old domain are kept and reported too. A file linked only from post content or an option doesn't
+  count as in use.
+- **A meta key that can't be removed stops that field.** What's left stays for a retry. If the
+  value went and only the path stayed, the retry keeps the file and reports it (`EraserTest`).
 - **An erasure leaves the account**, its role and its login (`EraserTest`).
 - **A wrong, used or expired link does nothing visible** on the front end: the visitor just gets
   the login page. wp-login.php shows an error (`ConfirmationTest`).
@@ -195,14 +199,17 @@ The addon handles the link when wp-login.php is locked. WordPress handles it oth
 | Nothing stored, nothing reported | ✅ | |
 | A dropdown left empty isn't reported as kept | ✅ | |
 | An erased value is gone from the next export | ✅ | |
-| A file field goes with its path and its file, in any folder of uploads | ✅ | |
+| A file field goes with its path and its file, in any folder of uploads, on http or https | ✅ | |
 | The profile picture and cover go with their paths and files | ✅ | |
 | A file used for both the picture and the cover goes | ✅ | |
 | A file that's already gone isn't reported | ✅ | |
 | A picture hosted elsewhere goes without a report | ✅ | |
 | Kept and reported: a file outside uploads, by path, climbing out, or through a link | ✅ | |
 | Kept and reported: a path that isn't the stored file, or no recorded path | ✅ | |
+| Kept and reported: a URL with a longer name ending the same, another folder or path ending the same, another host or port, or no host | ✅ | |
 | Kept and reported: a file another member or field uses, or in the Media Library | ✅ | |
+| Kept and reported: another member's reference URL-encoded, decoded, partly encoded, with plus signs, in a query string, or in a serialized value | ✅ | |
 | Kept and reported: a file in a repeater, or one that can't be deleted | ✅ | |
-| A file stays when its value can't be removed | ✅ | |
+| A file stays when its value can't be removed, its path survives, and a retry erases it | ✅ | |
+| A file stays when its path can't be removed, and a retry reports it | ✅ | |
 | Members can't run another member's request through admin-ajax | | ✅ |

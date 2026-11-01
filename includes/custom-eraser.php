@@ -80,8 +80,21 @@ function wpumpd_get_erasable_items() {
 }
 
 /**
+ * The host and port of a URL parsed with wp_parse_url().
+ *
+ * @param array|false $parts
+ * @return string
+ */
+function wpumpd_get_url_host( $parts ) {
+	$host = isset( $parts['host'] ) ? strtolower( $parts['host'] ) : '';
+	$port = isset( $parts['port'] ) ? ':' . $parts['port'] : '';
+
+	return $host . $port;
+}
+
+/**
  * Remove a file a member uploaded, if it can safely be removed: it has to be inside the uploads
- * folder, be the file the stored URL points to, and not be used by anyone or anything else.
+ * folder, be exactly the file the stored URL points to, and not be used by anyone or anything else.
  * Call this once the member's own meta has gone, so it no longer counts as a use of the file.
  *
  * @param string $url  The stored value. Rows of a repeater hold text as well as URLs.
@@ -91,12 +104,15 @@ function wpumpd_get_erasable_items() {
 function wpumpd_erase_file( $url, $path ) {
 	global $wpdb;
 
-	$uploads  = wp_get_upload_dir();
-	$url_path = rawurldecode( (string) wp_parse_url( $url, PHP_URL_PATH ) );
+	$uploads      = wp_get_upload_dir();
+	$uploads_url  = wp_parse_url( $uploads['baseurl'] );
+	$uploads_path = trailingslashit( isset( $uploads_url['path'] ) ? rawurldecode( $uploads_url['path'] ) : '' );
+	$stored_url   = wp_parse_url( $url );
+	$stored_path  = isset( $stored_url['path'] ) ? rawurldecode( $stored_url['path'] ) : '';
 
 	// With no path on record there's no telling whose file this is, so it isn't ours to delete.
 	if ( empty( $path ) ) {
-		return 0 !== strpos( $url_path, trailingslashit( (string) wp_parse_url( $uploads['baseurl'], PHP_URL_PATH ) ) );
+		return 0 !== strpos( $stored_path, $uploads_path );
 	}
 
 	if ( ! file_exists( $path ) ) {
@@ -112,12 +128,20 @@ function wpumpd_erase_file( $url, $path ) {
 
 	$relative = substr( $file, strlen( $base ) );
 
-	if ( substr( $url_path, - strlen( $relative ) ) !== $relative || attachment_url_to_postid( $url ) ) {
+	if ( $uploads_path . $relative !== $stored_path || wpumpd_get_url_host( $uploads_url ) !== wpumpd_get_url_host( $stored_url ) ) {
 		return false;
 	}
 
-	// Matches a URL or a path to the file, on its own or inside a serialized value.
-	$in_use = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->usermeta} WHERE meta_value LIKE %s", '%' . $wpdb->esc_like( $relative ) . '%' ) ); // phpcs:ignore
+	if ( attachment_url_to_postid( $url ) ) {
+		return false;
+	}
+
+	// Matches a URL or a path to the file, on its own or inside a serialized value. Anything a URL
+	// could encode is a wildcard, so this finds the file however a reference writes its name.
+	$pieces  = preg_split( '/[^A-Za-z0-9._~-]+/', $relative );
+	$pattern = '%' . implode( '%', array_map( array( $wpdb, 'esc_like' ), $pieces ) ) . '%';
+
+	$in_use = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->usermeta} WHERE meta_value LIKE %s", $pattern ) ); // phpcs:ignore
 
 	if ( $in_use ) {
 		return false;
@@ -173,9 +197,13 @@ function wpumpd_plugin_user_data_eraser( $email_address, $page = 1 ) {
 			$value = get_user_meta( $user->ID, $item['key'], true );
 			$path  = $item['path_key'] ? get_user_meta( $user->ID, $item['path_key'], true ) : '';
 
+			// Stop at the first failure: a retry needs the value and path that are left.
 			$removed = true;
 			foreach ( $keys as $key ) {
-				$removed = delete_user_meta( $user->ID, $key ) && $removed;
+				if ( ! delete_user_meta( $user->ID, $key ) ) {
+					$removed = false;
+					break;
+				}
 			}
 
 			if ( ! $removed ) {
