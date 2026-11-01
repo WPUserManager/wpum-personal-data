@@ -1,0 +1,13 @@
+{
+  "type": "addon",
+  "channels": { "wordpress_org": false, "edd": true },
+  "edd_download_id": 25551,
+  "main_file": "wpum-personal-data.php",
+  "version_locations": ["header", "property", "package_json", "readme"],
+  "version_checks": [
+    {
+      "file": "wpum-personal-data.php",
+      "pattern": "protected \\$version = '([^']+)'"
+    }
+  ]
+}

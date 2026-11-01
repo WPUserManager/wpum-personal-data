@@ -27,16 +27,24 @@ module.exports = function( grunt ) {
 					'!.gitignore',
 					'!.gitmodules',
 					'!yarn.lock',
+					'!package-lock.json',
+					'!.yarnrc',
 					'!README.md',
 					'!composer.lock',
 					'!composer.json',
-					'!.github',
+					'!.github/**',
 					'!release.json',
 					'!playwright.config.ts',
 					'!tsconfig.json',
 					'!.wp-env.json',
 					'!.wp-env.override.json',
-					'!test-results/**'
+					'!tests/**',
+					'!test-results/**',
+					'!playwright-report/**',
+					'!phpcs.xml',
+					'!phpstan.neon.dist',
+					'!phpstan-baseline.neon',
+					'!phpstan-stubs.php'
 				],
 				dest: 'release/<%= pkg.version %>/'
 			}
@@ -45,7 +53,7 @@ module.exports = function( grunt ) {
 			main: {
 				options: {
 					mode: 'zip',
-					archive: './release/<%= pkg.name %>.zip'
+					archive: './release/<%= pkg.name %>.<%= pkg.version %>.zip'
 				},
 				expand: true,
 				cwd: 'release/<%= pkg.version %>/',

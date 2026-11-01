@@ -1,0 +1,91 @@
+name: Code Quality
+
+# One job, because GitHub bills each job as at least a minute: the PHP syntax check on 7.4
+# to 8.3 in turn, then PHPCS and PHPStan. Nothing runs on push, on release branches or on
+# PRs into master: release PRs only change the version, and develop's PRs already ran.
+
+on:
+  pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'readme.txt'
+      - 'languages/**'
+  # A full run on any branch, e.g. develop after a merge: gh workflow run ci.yml --ref develop
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  code-quality:
+    name: Code Quality
+    if: github.event_name != 'pull_request' || (!startsWith(github.head_ref, 'release/') && github.base_ref != 'master')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP 7.4
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "7.4"
+          coverage: none
+
+      - name: Check syntax (PHP 7.4)
+        run: |
+          find . -name "*.php" -not -path "./vendor/*" -not -path "./release/*" | xargs -n1 -P4 php -l
+
+      - name: Setup PHP 8.0
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.0"
+          coverage: none
+
+      - name: Check syntax (PHP 8.0)
+        run: |
+          find . -name "*.php" -not -path "./vendor/*" -not -path "./release/*" | xargs -n1 -P4 php -l
+
+      - name: Setup PHP 8.1
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.1"
+          coverage: none
+
+      - name: Check syntax (PHP 8.1)
+        run: |
+          find . -name "*.php" -not -path "./vendor/*" -not -path "./release/*" | xargs -n1 -P4 php -l
+
+      - name: Setup PHP 8.2
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          coverage: none
+
+      - name: Check syntax (PHP 8.2)
+        run: |
+          find . -name "*.php" -not -path "./vendor/*" -not -path "./release/*" | xargs -n1 -P4 php -l
+
+      - name: Setup PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          coverage: none
+
+      - name: Check syntax (PHP 8.3)
+        run: |
+          find . -name "*.php" -not -path "./vendor/*" -not -path "./release/*" | xargs -n1 -P4 php -l
+
+      - name: Setup PHP 8.2 for PHPCS and PHPStan
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress --ignore-platform-reqs
+
+      - name: Run PHPCS
+        run: vendor/bin/phpcs --standard=phpcs.xml
+
+      - name: Run PHPStan
+        run: vendor/bin/phpstan analyse --memory-limit=2G

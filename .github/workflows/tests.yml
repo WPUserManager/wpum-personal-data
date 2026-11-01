@@ -1,0 +1,120 @@
+name: Unit Tests
+
+# Actions minutes are billed, so PRs run PHP 8.3 only; release tags (workflow_call) and manual
+# runs add PHP 7.4 and 8.1. Nothing runs on push, on release branches or on PRs into master:
+# the tag's release run tests the same code, and develop's PRs already ran.
+
+on:
+  pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'readme.txt'
+      - 'languages/**'
+  # Release runs this before it deploys.
+  workflow_call:
+  # A full run on any branch, e.g. develop after a merge: gh workflow run tests.yml --ref develop
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  wpunit:
+    if: github.event_name != 'pull_request' || (!startsWith(github.head_ref, 'release/') && github.base_ref != 'master')
+    name: WPUnit Tests (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ${{ fromJSON( github.event_name == 'pull_request' && '["8.3"]' || '["7.4", "8.1", "8.3"]' ) }}
+    steps:
+      - name: Checkout addon
+        uses: actions/checkout@v4
+        with:
+          path: wpum-personal-data
+
+      - name: Checkout wp-user-manager
+        uses: actions/checkout@v4
+        with:
+          repository: WPUserManager/wp-user-manager
+          path: wp-user-manager
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          coverage: none
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            wp-user-manager/vendor
+            wpum-personal-data/vendor
+          key: composer-${{ hashFiles('**/composer.lock', '**/composer.json') }}
+          restore-keys: composer-
+
+      - name: Build wp-user-manager
+        working-directory: wp-user-manager
+        run: |
+          composer install --prefer-dist --no-progress --ignore-platform-reqs
+          mkdir -p release/ci
+          cp composer.json composer.lock scoper.inc.php release/ci/
+          php -r "
+            \$j = json_decode(file_get_contents('release/ci/composer.json'), true);
+            \$j['config']['autoloader-suffix'] = 'WPUMScoped';
+            file_put_contents('release/ci/composer.json', json_encode(\$j, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+          "
+          bash bin/prefix-dependencies.sh ci
+          mv release/ci/vendor-dist ./vendor-dist
+          rm -rf release/ci
+
+      - name: Install addon Composer dependencies
+        working-directory: wpum-personal-data
+        run: composer install --prefer-dist --no-progress --ignore-platform-reqs
+
+      - name: Configure test environment
+        working-directory: wpum-personal-data
+        run: |
+          printf 'params:\n    - .env.local\n' > tests/codeception.yml
+          printf 'WP_ROOT_FOLDER=/var/www/html\n' > tests/.env.local
+          printf 'TEST_DB_NAME=tests-wordpress\n' >> tests/.env.local
+          printf 'TEST_DB_HOST=tests-mysql\n' >> tests/.env.local
+          printf 'TEST_DB_USER=root\n' >> tests/.env.local
+          printf 'TEST_DB_PASSWORD=password\n' >> tests/.env.local
+          printf 'TEST_TABLE_PREFIX=wp_\n' >> tests/.env.local
+          printf 'TEST_SITE_WP_DOMAIN=localhost:8889\n' >> tests/.env.local
+          printf 'TEST_SITE_ADMIN_EMAIL=admin@example.com\n' >> tests/.env.local
+
+      - name: Set wp-env PHP version
+        working-directory: wpum-personal-data
+        run: |
+          echo '{"phpVersion":"${{ matrix.php }}"}' > .wp-env.override.json
+
+      # Pinned for reproducible builds. 11.0.0 plus a simple-git override was a
+      # workaround for a February clone bug, but its PHP 7.4 and 8.0 images no
+      # longer build now Debian bullseye's security repository has gone.
+      - name: Install wp-env
+        run: |
+          cd /tmp
+          echo '{"private":true}' > package.json
+          npm install @wordpress/env@11.16.0
+          echo "/tmp/node_modules/.bin" >> "$GITHUB_PATH"
+
+      - name: Start wp-env
+        working-directory: wpum-personal-data
+        run: wp-env start
+
+      - name: Run WPUnit tests
+        working-directory: wpum-personal-data
+        run: |
+          wp-env run tests-cli \
+            --env-cwd=/var/www/html/wp-content/plugins/wpum-personal-data/tests \
+            bash -c "php ../vendor/bin/codecept run wpunit --skip-group known-bug --no-colors 2>&1"

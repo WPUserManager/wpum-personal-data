@@ -16,7 +16,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Register a custom eraser for the user custom fields.
  *
  * @param array $erasers
- * @return void
+ * @return array
  */
 function wpumpd_plugin_register_erasers( $erasers = array() ) {
 

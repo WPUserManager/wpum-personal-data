@@ -8,7 +8,14 @@
     "name": "WP User Manager",
     "url": "https://wpusermanager.com"
   },
+  "scripts": {
+    "test:e2e": "npx playwright test",
+    "test:e2e:ui": "npx playwright test --ui"
+  },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "@wordpress/env": "^11.16.0",
+    "typescript": "^5.9.3",
     "grunt": "~0.4.5",
     "grunt-contrib-clean": "~0.6.0",
     "grunt-contrib-compress": "~0.12.0",

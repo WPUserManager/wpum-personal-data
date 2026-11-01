@@ -1,0 +1,95 @@
+<?xml version="1.0" ?>
+<ruleset name="WPUM_Personal_Data">
+	<description>WordPress coding standards for the Personal Data addon.</description>
+
+	<file>.</file>
+	<exclude-pattern>vendor</exclude-pattern>
+	<exclude-pattern>node_modules/</exclude-pattern>
+	<exclude-pattern>release</exclude-pattern>
+	<exclude-pattern>languages</exclude-pattern>
+	<exclude-pattern>tests</exclude-pattern>
+	<exclude-pattern>Gruntfile.js</exclude-pattern>
+	<exclude-pattern>phpstan-stubs.php</exclude-pattern>
+	<arg name="extensions" value="php"/>
+
+	<!--
+	The addon predates the coding standards. Formatting, comment and naming sniffs are off so
+	the code isn't reformatted wholesale. Security and database sniffs stay on but report as
+	warnings, which don't fail CI, so existing issues stay visible in the output. Promote them to
+	errors once the legacy code has been fixed.
+	-->
+	<config name="ignore_warnings_on_exit" value="1"/>
+
+	<rule ref="WordPress">
+		<!-- Formatting. -->
+		<exclude name="Generic.WhiteSpace"/>
+		<exclude name="Generic.Formatting"/>
+		<exclude name="Generic.Functions.FunctionCallArgumentSpacing"/>
+		<exclude name="Generic.Functions.OpeningFunctionBraceKernighanRitchie"/>
+		<exclude name="Generic.ControlStructures.InlineControlStructure"/>
+		<exclude name="Generic.Strings.UnnecessaryStringConcat"/>
+		<exclude name="NormalizedArrays.Arrays"/>
+		<exclude name="PEAR.Files.IncludingFile"/>
+		<exclude name="PEAR.Functions.FunctionCallSignature"/>
+		<exclude name="PSR2.Classes.ClassDeclaration"/>
+		<exclude name="PSR2.ControlStructures.ElseIfDeclaration"/>
+		<exclude name="PSR2.Files.ClosingTag"/>
+		<exclude name="PSR2.Files.EndFileNewline"/>
+		<exclude name="PSR2.Methods.FunctionClosingBrace"/>
+		<exclude name="Squiz.ControlStructures.ControlSignature"/>
+		<exclude name="Squiz.Functions.FunctionDeclarationArgumentSpacing"/>
+		<exclude name="Squiz.Functions.MultiLineFunctionDeclaration"/>
+		<exclude name="Squiz.Strings.ConcatenationSpacing"/>
+		<exclude name="Squiz.Strings.DoubleQuoteUsage"/>
+		<exclude name="Squiz.WhiteSpace.SuperfluousWhitespace"/>
+		<exclude name="Universal.Arrays.DisallowShortArraySyntax"/>
+		<exclude name="Universal.WhiteSpace"/>
+		<exclude name="WordPress.Arrays"/>
+		<exclude name="WordPress.WhiteSpace"/>
+
+		<!-- Comments. -->
+		<exclude name="Generic.Commenting.DocComment"/>
+		<exclude name="Squiz.Commenting"/>
+
+		<!-- Naming and file layout. -->
+		<exclude name="PEAR.NamingConventions.ValidClassName"/>
+		<exclude name="PSR2.Classes.PropertyDeclaration.Underscore"/>
+		<exclude name="WordPress.Files.FileName"/>
+		<exclude name="WordPress.NamingConventions"/>
+		<exclude name="Universal.Files.SeparateFunctionsFromOO.Mixed"/>
+
+		<!-- Style choices that would change behaviour if "fixed" automatically. -->
+		<exclude name="Generic.CodeAnalysis.AssignmentInCondition"/>
+		<exclude name="Generic.CodeAnalysis.UnusedFunctionParameter"/>
+		<exclude name="Modernize.FunctionCalls.Dirname"/>
+		<exclude name="Squiz.PHP.DisallowMultipleAssignments.FoundInControlStructure"/>
+		<exclude name="Universal.CodeAnalysis.NoEchoSprintf"/>
+		<exclude name="Universal.Operators.DisallowStandalonePostIncrementDecrement"/>
+		<exclude name="Universal.Operators.StrictComparisons"/>
+		<exclude name="WordPress.PHP.YodaConditions"/>
+		<exclude name="WordPress.DB.SlowDBQuery"/>
+	</rule>
+
+	<!-- Legacy issues: reported, but as warnings. -->
+	<rule ref="WordPress.Security.EscapeOutput">
+		<type>warning</type>
+	</rule>
+	<rule ref="WordPress.Security.NonceVerification">
+		<type>warning</type>
+	</rule>
+	<rule ref="WordPress.Security.ValidatedSanitizedInput">
+		<type>warning</type>
+	</rule>
+	<rule ref="WordPress.DB.PreparedSQL">
+		<type>warning</type>
+	</rule>
+	<rule ref="WordPress.DB.PreparedSQLPlaceholders">
+		<type>warning</type>
+	</rule>
+	<rule ref="WordPress.PHP.DontExtract">
+		<type>warning</type>
+	</rule>
+	<rule ref="WordPress.WP.I18n.MissingTranslatorsComment">
+		<type>warning</type>
+	</rule>
+</ruleset>
